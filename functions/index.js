@@ -12,7 +12,7 @@ exports.userRegister = functions.auth.user().onCreate(user => {
    return admin.firestore().collection(collectionName).doc(user.uid).set({
        email: user.email,
        name: user.displayName,
-       profilePic: user.photoURL
+       profileUrl: user.photoURL
    });
 });
 
