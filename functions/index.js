@@ -9,10 +9,12 @@ const collectionName = 'users'
 
 // auth trigger (user creation) 
 exports.userRegister = functions.auth.user().onCreate(user => {
+    var providerId = user.providerData[0].providerId
    return admin.firestore().collection(collectionName).doc(user.uid).set({
        email: user.email,
        name: user.displayName,
        profileUrl: user.photoURL,
+       provider: providerId,
        createdAt: admin.firestore.FieldValue.serverTimestamp()
    });
 });
