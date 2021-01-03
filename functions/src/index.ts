@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+const algoliasearch = require('algoliasearch');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -30,6 +31,29 @@ export const userDelete = functions.auth.user().onDelete(user => {
     return doc.delete();
 });
 
+// -----------------------------------------------------------------------
+// Functions related to users and algolia indexing
+// -----------------------------------------------------------------------
+const client = algoliasearch(functions.config().algolia.appid, functions.config().algolia.apikey);
+const index = client.initIndex('user_search');
+
+export const indexUser = functions.firestore.document(`${userCollection}/{userId}`).onCreate(async (snap, context) => {
+    const data = snap.data();
+    const objectId = snap.id;
+
+    // Add the data to the algolia index
+    return await index.saveObject({
+        objectID: objectId,
+        ...data,
+    }).catch((err: any) => console.error(err));
+});
+
+export const unindexUser = functions.firestore.document(`${userCollection}/{userId}`).onDelete(async (snap, context) => {
+    const objectId = snap.id;
+
+    // Add the data to the algolia index
+    return await index.deleteObject(objectId).catch((err: any) => console.error(err));
+});
 
 // -----------------------------------------------------------------------
 // Functions related to event collection
@@ -37,9 +61,9 @@ export const userDelete = functions.auth.user().onDelete(user => {
 
 export const addDateToEvent = functions.firestore.document(`${events}/{eventId}`).onCreate((snapshot, context) => {
     return snapshot.ref.set({
-            createdOn: admin.firestore.FieldValue.serverTimestamp(),
-        }, 
-        {merge: true}
+        createdOn: admin.firestore.FieldValue.serverTimestamp(),
+    },
+        { merge: true }
     );
 });
 
@@ -58,7 +82,7 @@ export const addExpenseToEvent = functions.firestore
         try {
             const snap = await eventRef.get()
             const currentAmount = snap.data()?.totalExpense ?? 0
-            
+
             const totalAmount = currentAmount + amount
 
             functions.logger.log("Current Amount", currentAmount);
@@ -67,8 +91,9 @@ export const addExpenseToEvent = functions.firestore
 
             await eventRef.update({
                 totalExpense: totalAmount,
-             })
-        } catch(error){
+            })
+        } catch (error) {
             functions.logger.error("Error adding expense", error)
         }
     });
+
