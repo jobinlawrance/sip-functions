@@ -16,6 +16,7 @@ const events = 'events'
 export const userRegister = functions.auth.user().onCreate(user => {
     const providerId = user.providerData[0].providerId;
     return db.collection(userCollection).doc(user.uid).set({
+        objectID: user.uid,
         email: user.email,
         name: user.displayName,
         profileUrl: user.photoURL,
